@@ -1,4 +1,4 @@
-name: Cross-Platform Executable Build
+name: Cross-Platform Executable Build (PyInstaller Only)
 
 on:
   push:
@@ -7,7 +7,6 @@ on:
 
 jobs:
   build:
-    # Запуск параллельных заданий для Windows, macOS и Linux
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
@@ -23,25 +22,24 @@ jobs:
       with:
         python-version: '3.10'
 
-    - name: Install dependencies
+    - name: Install PyInstaller and Dependencies
       run: |
-        # Устанавливаем PyInstaller, PyArmor и внешнюю библиотеку art
-        pip install pyinstaller pyarmor art
+        # Устанавливаем PyInstaller и необходимые библиотеки
+        pip install pyinstaller art
 
-    - name: Obfuscate and Build Executable
+    - name: Build Executable with PyInstaller
       run: |
-        # 1. Обфускация (шифрование)
-        C:\Users\Svetlik\AppData\Roaming\Python\Python314\Scripts\pyarmor gen SQlite3tyJsonL.py
-        
-        # 2. Сборка в один файл. Включаем sqlite3 и art, чтобы избежать ошибок.
-        pyinstaller --onefile --hidden-import sqlite3 --hidden-import art dist/SQlite3tyJsonL.py
+        # Сборка в один файл
+        # --hidden-import гарантирует, что проблемные модули (sqlite3, art) будут включены.
+        # Это абсолютно необходимо для стабильности на разных ОС.
+        pyinstaller --onefile --hidden-import sqlite3 --hidden-import art SQlite3tyJsonL.py
 
     - name: Determine Output Name and Path
       id: output_info
       run: |
         # Определяем имя и путь финального файла в зависимости от ОС
+        # PyInstaller размещает финальный файл в папке 'dist'
         if [ "${{ runner.os }}" == "Windows" ]; then
-          # PyInstaller в этом контексте помещает файл в dist/dist/SQlite3tyJsonL.exe
           echo "artifact_path=dist/SQlite3tyJsonL.exe" >> $GITHUB_OUTPUT
           echo "artifact_name=SQlite3tyJsonL-Windows.exe" >> $GITHUB_OUTPUT
         elif [ "${{ runner.os }}" == "macOS" ]; then
@@ -55,7 +53,7 @@ jobs:
     - name: Upload Final Executable
       uses: actions/upload-artifact@v4
       with:
-        # Каждый артефакт будет иметь уникальное имя
         name: ${{ steps.output_info.outputs.artifact_name }}
-        # Используем единый путь, который гарантированно сработает в GitHub Actions.
-        path: dist/${{ steps.output_info.outputs.artifact_path }}
+        # Используем путь, определенный выше. 
+        # Обратите внимание: путь dist/SQlite3tyJsonL.exe соответствует структуре PyInstaller
+        path: ${{ steps.output_info.outputs.artifact_path }}

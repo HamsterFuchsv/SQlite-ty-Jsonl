@@ -24,36 +24,42 @@ jobs:
 
     - name: Install PyInstaller and Dependencies
       run: |
-        # Устанавливаем PyInstaller и необходимые библиотеки
         pip install pyinstaller art
 
     - name: Build Executable with PyInstaller
       run: |
-        # Сборка в один файл
-        # --hidden-import гарантирует, что проблемные модули (sqlite3, art) будут включены.
-        # Это абсолютно необходимо для стабильности на разных ОС.
+        # Сборка в один файл.
+        # Явное включение sqlite3 и art для стабильности на всех платформах.
         pyinstaller --onefile --hidden-import sqlite3 --hidden-import art SQlite3tyJsonL.py
 
-    - name: Determine Output Name and Path
-      id: output_info
+    # --- 1. Установка переменных для LINUX ---
+    - name: Set Linux Build Variables
+      if: runner.os == 'Linux'
       run: |
-        # Определяем имя и путь финального файла в зависимости от ОС
-        # PyInstaller размещает финальный файл в папке 'dist'
-        if [ "${{ runner.os }}" == "Windows" ]; then
-          echo "artifact_path=dist/SQlite3tyJsonL.exe" >> $GITHUB_OUTPUT
-          echo "artifact_name=SQlite3tyJsonL-Windows.exe" >> $GITHUB_OUTPUT
-        elif [ "${{ runner.os }}" == "macOS" ]; then
-          echo "artifact_path=dist/SQlite3tyJsonL" >> $GITHUB_OUTPUT
-          echo "artifact_name=SQlite3tyJsonL-macOS" >> $GITHUB_OUTPUT
-        else # Linux (Ubuntu)
-          echo "artifact_path=dist/SQlite3tyJsonL" >> $GITHUB_OUTPUT
-          echo "artifact_name=SQlite3tyJsonL-Linux" >> $GITHUB_OUTPUT
-        fi
+        echo "UPLOAD_NAME=SQlite3tyJsonL-Linux" >> $GITHUB_ENV
+        echo "UPLOAD_PATH=dist/SQlite3tyJsonL" >> $GITHUB_ENV
+
+    # --- 2. Установка переменных для MACOS ---
+    - name: Set macOS Build Variables
+      if: runner.os == 'macOS'
+      run: |
+        echo "UPLOAD_NAME=SQlite3tyJsonL-macOS" >> $GITHUB_ENV
+        echo "UPLOAD_PATH=dist/SQlite3tyJsonL" >> $GITHUB_ENV
+
+    # --- 3. Установка переменных для WINDOWS ---
+    - name: Set Windows Build Variables
+      if: runner.os == 'Windows'
+      # Явно используем PowerShell для корректного синтаксиса на Windows-раннере
+      shell: powershell
+      run: |
+        # Имя файла для Windows должно включать .exe
+        Write-Host "UPLOAD_NAME=SQlite3tyJsonL-Windows.exe" >> $env:GITHUB_ENV
+        # Путь к файлу для Windows (используем обратный слеш для большей надежности)
+        Write-Host "UPLOAD_PATH=dist\SQlite3tyJsonL.exe" >> $env:GITHUB_ENV
         
     - name: Upload Final Executable
       uses: actions/upload-artifact@v4
       with:
-        name: ${{ steps.output_info.outputs.artifact_name }}
-        # Используем путь, определенный выше. 
-        # Обратите внимание: путь dist/SQlite3tyJsonL.exe соответствует структуре PyInstaller
-        path: ${{ steps.output_info.outputs.artifact_path }}
+        # Используем переменные, установленные в предыдущих шагах
+        name: ${{ env.UPLOAD_NAME }}
+        path: ${{ env.UPLOAD_PATH }}

@@ -28,38 +28,35 @@ jobs:
 
     - name: Build Executable with PyInstaller
       run: |
-        # Сборка в один файл.
-        # Явное включение sqlite3 и art для стабильности на всех платформах.
+        # Сборка в один файл. Используем forward slash для пути к скрипту.
         pyinstaller --onefile --hidden-import sqlite3 --hidden-import art SQlite3tyJsonL.py
 
-    # --- 1. Установка переменных для LINUX ---
-    - name: Set Linux Build Variables
-      if: runner.os == 'Linux'
+    # --- 1. Установка переменных для Linux/macOS ---
+    - name: Set Unix Build Variables
+      # Шаг выполняется только на Linux или macOS
+      if: runner.os == 'Linux' || runner.os == 'macOS'
       run: |
-        echo "UPLOAD_NAME=SQlite3tyJsonL-Linux" >> $GITHUB_ENV
+        # Определяем суффикс (Linux или macOS)
+        NAME_SUFFIX="${{ runner.os == 'Linux' && 'Linux' || 'macOS' }}"
+        # Устанавливаем переменные для Bash Shell
+        echo "UPLOAD_NAME=SQlite3tyJsonL-${NAME_SUFFIX}" >> $GITHUB_ENV
         echo "UPLOAD_PATH=dist/SQlite3tyJsonL" >> $GITHUB_ENV
 
-    # --- 2. Установка переменных для MACOS ---
-    - name: Set macOS Build Variables
-      if: runner.os == 'macOS'
-      run: |
-        echo "UPLOAD_NAME=SQlite3tyJsonL-macOS" >> $GITHUB_ENV
-        echo "UPLOAD_PATH=dist/SQlite3tyJsonL" >> $GITHUB_ENV
-
-    # --- 3. Установка переменных для WINDOWS ---
+    # --- 2. Установка переменных для WINDOWS ---
     - name: Set Windows Build Variables
+      # Шаг выполняется только на Windows
       if: runner.os == 'Windows'
-      # Явно используем PowerShell для корректного синтаксиса на Windows-раннере
       shell: powershell
       run: |
-        # Имя файла для Windows должно включать .exe
+        # Используем PowerShell shell для установки переменных окружения
+        # Используем forward slash (/) для пути, так как это безопаснее в GitHub Actions
         Write-Host "UPLOAD_NAME=SQlite3tyJsonL-Windows.exe" >> $env:GITHUB_ENV
-        # Путь к файлу для Windows (используем обратный слеш для большей надежности)
-        Write-Host "UPLOAD_PATH=dist\SQlite3tyJsonL.exe" >> $env:GITHUB_ENV
+        Write-Host "UPLOAD_PATH=dist/SQlite3tyJsonL.exe" >> $env:GITHUB_ENV
         
     - name: Upload Final Executable
       uses: actions/upload-artifact@v4
       with:
-        # Используем переменные, установленные в предыдущих шагах
+        # Используем переменные, которые гарантированно будут установлены
+        # в одном из предыдущих, условно выполненных шагов.
         name: ${{ env.UPLOAD_NAME }}
         path: ${{ env.UPLOAD_PATH }}

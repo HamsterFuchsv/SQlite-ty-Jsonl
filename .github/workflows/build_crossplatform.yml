@@ -28,35 +28,35 @@ jobs:
 
     - name: Build Executable with PyInstaller
       run: |
-        # Сборка в один файл. Используем forward slash для пути к скрипту.
+        # Сборка в один файл. Включаем sqlite3 и art для стабильности.
         pyinstaller --onefile --hidden-import sqlite3 --hidden-import art SQlite3tyJsonL.py
 
-    # --- 1. Установка переменных для Linux/macOS ---
+    # --- 1. Установка переменных для Linux/macOS (Bash) ---
     - name: Set Unix Build Variables
-      # Шаг выполняется только на Linux или macOS
       if: runner.os == 'Linux' || runner.os == 'macOS'
+      # Явно указываем Bash shell для надежности
+      shell: bash
       run: |
-        # Определяем суффикс (Linux или macOS)
         NAME_SUFFIX="${{ runner.os == 'Linux' && 'Linux' || 'macOS' }}"
-        # Устанавливаем переменные для Bash Shell
+        
+        # ЭТО НАДЕЖНЫЙ СИНТАКСИС ДЛЯ BASH
         echo "UPLOAD_NAME=SQlite3tyJsonL-${NAME_SUFFIX}" >> $GITHUB_ENV
         echo "UPLOAD_PATH=dist/SQlite3tyJsonL" >> $GITHUB_ENV
 
-    # --- 2. Установка переменных для WINDOWS ---
+    # --- 2. Установка переменных для WINDOWS (PowerShell) ---
     - name: Set Windows Build Variables
-      # Шаг выполняется только на Windows
       if: runner.os == 'Windows'
+      # Явно указываем PowerShell shell для надежности
       shell: powershell
       run: |
-        # Используем PowerShell shell для установки переменных окружения
-        # Используем forward slash (/) для пути, так как это безопаснее в GitHub Actions
-        Write-Host "UPLOAD_NAME=SQlite3tyJsonL-Windows.exe" >> $env:GITHUB_ENV
-        Write-Host "UPLOAD_PATH=dist/SQlite3tyJsonL.exe" >> $env:GITHUB_ENV
+        # ЭТО НАДЕЖНЫЙ СИНТАКСИС ДЛЯ POWERSHELL
+        "UPLOAD_NAME=SQlite3tyJsonL-Windows.exe" >> $env:GITHUB_ENV
+        # Путь для Windows с расширением
+        "UPLOAD_PATH=dist/SQlite3tyJsonL.exe" >> $env:GITHUB_ENV
         
     - name: Upload Final Executable
       uses: actions/upload-artifact@v4
       with:
-        # Используем переменные, которые гарантированно будут установлены
-        # в одном из предыдущих, условно выполненных шагов.
+        # Теперь эти переменные должны быть установлены для всех ОС
         name: ${{ env.UPLOAD_NAME }}
         path: ${{ env.UPLOAD_PATH }}

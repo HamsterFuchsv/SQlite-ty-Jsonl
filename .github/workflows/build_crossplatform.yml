@@ -1,0 +1,71 @@
+name: Cross-Platform Executable Build
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    # Определяем, для каких операционных систем будет запущена сборка.
+    # Это ключевой шаг для кросс-платформенной сборки.
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        
+    # Запускаем задание на выбранной ОС
+    runs-on: ${{ matrix.os }} 
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
+
+    - name: Install dependencies
+      run: |
+        pip install pyinstaller pyarmor
+        # Устанавливаем внешние зависимости, необходимые для скрипта
+        pip install art
+
+    - name: Obfuscate and Build Executable
+      run: |
+        # Определяем расширение для финального файла
+        if [ "${{ runner.os }}" == "Windows" ]; then
+          EXE_EXT=".exe"
+        else
+          EXE_EXT=""
+        fi
+
+        # 1. Обфускация (шифрование)
+        pyarmor gen SQlite3tyJsonL.py
+        
+        # 2. Сборка в один файл
+        # --hidden-import гарантирует, что проблемные модули (sqlite3, art) будут включены везде
+        pyinstaller --onefile --hidden-import sqlite3 --hidden-import art dist/SQlite3tyJsonL.py
+
+    - name: Determine Output Name
+      id: output_name
+      run: |
+        if [ "${{ runner.os }}" == "Windows" ]; then
+          name="SQlite3tyJsonL-Windows.exe"
+        elif [ "${{ runner.os }}" == "macOS" ]; then
+          name="SQlite3tyJsonL-macOS"
+        else
+          name="SQlite3tyJsonL-Linux"
+        fi
+        echo "filename=$name" >> $GITHUB_OUTPUT
+        
+    - name: Upload Final Executable
+      uses: actions/upload-artifact@v4
+      with:
+        name: Executables
+        # Путь к финальному файлу. PyInstaller сохраняет его в dist/dist
+        path: dist/SQlite3tyJsonL${{ steps.output_name.outputs.EXE_EXT }}
+        # Для macOS и Linux исполняемый файл находится по пути dist/dist/SQlite3tyJsonL
+        # Для Windows исполняемый файл находится по пути dist\dist\SQlite3tyJsonL.exe
+        # Мы используем общий путь, а переменная EXE_EXT добавит расширение, где нужно.
+        path: dist/dist/${{ steps.output_name.outputs.filename }}
